@@ -58,18 +58,26 @@ async function run() {
     // save in db
     app.post('/foods', async (req, res) => {
       const foodData = req.body
-
       const result = await foodsCollection.insertOne(foodData)
       res.send(result)
     })
 
+   // Fetching purchase
+    app.get('/purchase', async (req, res) => {
+      const result = await purchaseCollection.find().toArray()
+      res.send(result)
+    })
+    
     // save in db
     app.post('/purchase', async (req, res) => {
       const purchaseData = req.body
-
       const result = await purchaseCollection.insertOne(purchaseData)
       res.send(result)
     })
+
+   
+
+    
 
     // Get all foods data from DB
     // Send a ping to confirm a successful connection
