@@ -48,12 +48,22 @@ async function run() {
 
 
      // reading with email
-    //  app.get("/foods/:email", async (req, res) => {
-    //   const result = await foodsCollection
-    //     .find({ email: req.params.email })
-    //     .toArray();
-    //   res.send(result);
-    // });
+     app.get("/food/:email", async (req, res) => {
+      console.log(req.params.email);
+      const result = await foodsCollection
+        .find({ email: req.params.email })
+        .toArray();
+      res.send(result);
+    });
+
+    // Delete
+    app.delete("/foods/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodsCollection.deleteOne(query);
+      res.send(result);
+    });
+
 
     // save in db
     app.post('/foods', async (req, res) => {
@@ -74,6 +84,23 @@ async function run() {
       const result = await purchaseCollection.insertOne(purchaseData)
       res.send(result)
     })
+
+     // reading with email
+     app.get("/purchase/:email", async (req, res) => {
+      console.log(req.params.email);
+      const result = await purchaseCollection
+        .find({ email: req.params.email })
+        .toArray();
+      res.send(result);
+    });
+
+    // Delete
+    app.delete("/purchases/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await purchaseCollection.deleteOne(query);
+      res.send(result);
+    });
 
    
 
