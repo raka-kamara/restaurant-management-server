@@ -10,7 +10,9 @@ const app = express()
 const corsOptions = {
     origin: [
       'http://localhost:5173',
-    ],
+      "https://restaurant-management-4fdac.web.app",
+      "https://restaurant-management-4fdac.firebaseapp.com",
+      ],
     credentials: true,
     optionSuccessStatus: 200,
   }
@@ -31,6 +33,7 @@ async function run() {
   try {
     const foodsCollection = client.db('flouricious').collection('foods')
     const purchaseCollection = client.db('flouricious').collection('purchase')
+    const feedbackCollection = client.db('flouricious').collection('feedback')
 
     // Fetching food
     app.get('/foods', async (req, res) => {
@@ -72,6 +75,35 @@ async function run() {
       res.send(result)
     })
 
+
+    // save in db
+    app.post('/feedback', async (req, res) => {
+      const feedbackData = req.body
+      const result = await feedbackCollection.insertOne(feedbackData)
+      res.send(result)
+    })
+
+   // Fetching feedback
+    app.get('/feedback', async (req, res) => {
+      const result = await feedbackCollection.find().toArray()
+      res.send(result)
+    })
+
+    app.put("/updateProduct/:id", async (req, res) => {
+      const query = { _id: new ObjectId(req.params.id) };
+      const data = {
+        $set: {
+          name: req.body.name,
+          price: req.body.price,
+          quantity: req.body.stock,
+          photo: req.body.photo,
+        },
+      };
+      const result = foodsCollection.updateOne(query, data);
+      console.log(result);
+      res.send(result);
+    });
+
    // Fetching purchase
     app.get('/purchase', async (req, res) => {
       const result = await purchaseCollection.find().toArray()
@@ -98,7 +130,7 @@ async function run() {
     app.delete("/purchases/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await purchaseCollection.deleteOne(query);
+      const result = await purchaseCollection .deleteOne(query);
       res.send(result);
     });
 
@@ -108,7 +140,7 @@ async function run() {
 
     // Get all foods data from DB
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
