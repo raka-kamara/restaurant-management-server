@@ -1,5 +1,7 @@
 const express = require('express')
 const cors = require('cors')
+const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 require('dotenv').config()
@@ -18,6 +20,7 @@ const corsOptions = {
   }
   app.use(cors(corsOptions))
   app.use(express.json())
+  app.use(cookieParser())
 
   const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.lentaxi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -29,14 +32,36 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
+const cookieOption = {
+  httpOnly: true,
+  secure: "production" ? true:false,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+}
 async function run() {
   try {
     const foodsCollection = client.db('flouricious').collection('foods')
     const purchaseCollection = client.db('flouricious').collection('purchase')
     const feedbackCollection = client.db('flouricious').collection('feedback')
 
+//  jwt api
+
+app.post('/jwt', async(req, res) =>{
+  const user = req.body;
+  console.log("user for token", user);
+  const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1h'});
+  res.cookie('token', token,)
+  res.send({success: ture})
+})
+
+app.post('/logout', async(req, res)=>{
+  const user = req.body;
+  res.clearCookie('token', cookieOption,  {...cookieOption,maxAge: 0}).send({success: true})
+})
+
+// Services API
     // Fetching food
     app.get('/foods', async (req, res) => {
+      console.log('cock', req.cookies)
       const result = await foodsCollection.find().toArray()
       res.send(result)
     })
