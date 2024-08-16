@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors')
+require('dotenv').config()
 const jwt = require('jsonwebtoken')
 const cookieParser = require('cookie-parser')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -32,11 +33,17 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
-const cookieOption = {
-  httpOnly: true,
-  secure: "production" ? true:false,
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+
+const logger = (req, res, next) =>{
+  console.log(req.method, req.url);
+  next();
 }
+
+// const cookieOption = {
+//   httpOnly: true,
+//   secure: "production" ? true:false,
+//   sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+// }
 async function run() {
   try {
     const foodsCollection = client.db('flouricious').collection('foods')
@@ -44,23 +51,25 @@ async function run() {
     const feedbackCollection = client.db('flouricious').collection('feedback')
 
 //  jwt api
-
-app.post('/jwt', async(req, res) =>{
-  const user = req.body;
-  console.log("user for token", user);
-  const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1h'});
-  res.cookie('token', token,)
-  res.send({success: ture})
-})
+// app.post('/jwt', async(req, res) =>{
+//   const user = req.body;
+//   const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1h'});
+//   res.cookie('token', token, {
+//     httpOnly: true,
+//     secure: true,
+//     sameSite: 'none'
+//   })
+//   // res.send({success: ture})
+// })
 
 app.post('/logout', async(req, res)=>{
-  const user = req.body;
+  const user = req.body; 
   res.clearCookie('token', cookieOption,  {...cookieOption,maxAge: 0}).send({success: true})
 })
 
 // Services API
     // Fetching food
-    app.get('/foods', async (req, res) => {
+    app.get('/foods', logger, async (req, res) => {
       console.log('cock', req.cookies)
       const result = await foodsCollection.find().toArray()
       res.send(result)
@@ -114,20 +123,64 @@ app.post('/logout', async(req, res)=>{
       res.send(result)
     })
 
-    app.put("/updateProduct/:id", async (req, res) => {
-      const query = { _id: new ObjectId(req.params.id) };
-      const data = {
-        $set: {
-          name: req.body.name,
-          price: req.body.price,
-          quantity: req.body.stock,
-          photo: req.body.photo,
-        },
-      };
-      const result = foodsCollection.updateOne(query, data);
-      console.log(result);
-      res.send(result);
+    // Fetching feedback by id
+    app.get('/feedback/:foodId', (req, res) => {
+      const foodId = parseInt(req.params.foodId);
+      const feedback = feedbackData.filter(item => item.foodId === foodId);
+      res.json(feedback);
     });
+
+    app.put("/food/:id", async (req, res) => {
+     const id = req.params.id
+     const foodData = req.body
+     const query = {_id: new ObjectId(id)}
+     const options = { upsert: true }
+     const updateDoc = {
+      $set: {
+        ...foodData,
+      },
+    }
+    const result = await foodsCollection.updateOne(query, updateDoc, options)
+    res.send(result)
+    });
+
+    // app.put("/increasePurchase/:id", async(req, res) =>{
+    //   const id = req.params.id;
+    //   const query = {_id: new ObjectId(id)};
+    //   const food = {
+    //     $inc: {
+    //       purchaseQuantity: 1
+    //     }
+    //   }
+    //   const result = await foodsCollection.updateOne(query, food);
+    //   res.send(result);
+    // })
+
+    // app.put("/decreaseQuantity/:id", async(req, res) =>{
+    //   const id = req.params.id;
+    //   const query = {_id: new ObjectId(id)};
+    //   const food = {
+    //     $inc: {
+    //       quantity: -1
+    //     }
+    //   }
+    //   const result = await foodsCollection.updateOne(query, food);
+    //   res.send(result);
+    // })
+  
+  app.get('/top-purchase', async (req, res) => {
+      try {
+        const result = await foodsCollection
+          .find()
+          .sort({ purchaseQuantity: -1 }) // Sort by totalPurchased in descending order
+          .limit(6) // Limit the result to 6 items
+          .toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: 'An error occurred while fetching purchases' });
+      }
+    });
+    
 
    // Fetching purchase
     app.get('/purchase', async (req, res) => {
@@ -135,6 +188,9 @@ app.post('/logout', async(req, res)=>{
       res.send(result)
     })
     
+
+ 
+
     // save in db
     app.post('/purchase', async (req, res) => {
       const purchaseData = req.body
